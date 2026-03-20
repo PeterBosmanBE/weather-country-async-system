@@ -1,55 +1,82 @@
 package be.peterbosman.resource;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import be.peterbosman.entity.WeatherMessage;
 import be.peterbosman.entity.WeatherRequest;
-import be.peterbosman.repository.WeatherRequestRepository;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 
-import java.util.Optional;
+import java.util.Map;
 
 @Path("/weather")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class WeatherResource {
 
-    @Inject
-    WeatherRequestRepository weatherRequestRepository;
+    @Channel("weather-requests-out")
+    Emitter<String> emitter;
 
-    // Here you would inject a service to send messages to the request queue
-    // For example:
-    // @Inject
-    // RequestQueueService requestQueueService;
+    @Inject
+    ObjectMapper objectMapper;
 
     @POST
     @Transactional
-    public Response requestWeather(WeatherRequest request) {
-        request.status = WeatherRequest.Status.PENDING;
-        weatherRequestRepository.persist(request);
-        // requestQueueService.send(request);
-        return Response.status(Response.Status.ACCEPTED).entity(request).build();
+    public Response requestWeather(String location) {
+        String cleanLocation = location == null ? "" : location.trim();
+        if (cleanLocation.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", "Location is required"))
+                    .build();
+        }
+
+        WeatherRequest req = new WeatherRequest();
+        req.location = cleanLocation;
+        req.status = "PENDING";
+        req.persistAndFlush();
+
+        WeatherMessage message = new WeatherMessage();
+        message.id = req.id;
+        message.location = req.location;
+        message.status = req.status;
+
+        try {
+            emitter.send(objectMapper.writeValueAsString(message));
+        } catch (JsonProcessingException e) {
+            req.status = "FAILED";
+            req.result = "Failed to serialize outgoing message";
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Map.of("error", "Failed to queue weather request"))
+                    .build();
+        }
+
+        return Response.accepted(req).build();
     }
 
     @GET
     @Path("/{id}/status")
     public Response getStatus(@PathParam("id") Long id) {
-        Optional<WeatherRequest> weatherRequest = weatherRequestRepository.findByIdOptional(id);
-        return weatherRequest.map(req -> Response.ok(req.status).build())
-                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+        WeatherRequest req = WeatherRequest.findById(id);
+        if (req == null) {
+            return Response.status(404).build();
+        }
+
+        return Response.ok(req.status).build();
     }
 
     @GET
     @Path("/{id}/result")
     public Response getResult(@PathParam("id") Long id) {
-        Optional<WeatherRequest> weatherRequest = weatherRequestRepository.findByIdOptional(id);
-        return weatherRequest.map(req -> {
-            if (req.status == WeatherRequest.Status.COMPLETE) {
-                return Response.ok(req.weatherInfo).build();
-            } else {
-                return Response.status(Response.Status.NO_CONTENT).entity("Result not yet available.").build();
-            }
-        }).orElse(Response.status(Response.Status.NOT_FOUND).build());
+        WeatherRequest req = WeatherRequest.findById(id);
+        if (req == null) {
+            return Response.status(404).build();
+        }
+
+        return Response.ok(req.result == null ? "" : req.result).build();
     }
 }
