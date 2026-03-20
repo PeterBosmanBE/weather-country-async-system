@@ -1,0 +1,13 @@
+# Database configuration
+quarkus.datasource.db-kind=postgresql
+quarkus.datasource.username=
+quarkus.datasource.password=
+quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/quarkus
+
+quarkus.hibernate-orm.database.generation=update
+
+# AMQP configuration for request queue
+quarkus.amqp.host=localhost
+quarkus.amqp.port=5672
+quarkus.amqp.username=guest
+quarkus.amqp.password=guest
