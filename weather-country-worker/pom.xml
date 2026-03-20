@@ -58,6 +58,13 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-smallrye-health</artifactId>
         </dependency>
+        <!-- Source: https://mvnrepository.com/artifact/org.apache.camel.quarkus/camel-quarkus-activemq -->
+        <dependency>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-activemq</artifactId>
+            <version>3.32.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
