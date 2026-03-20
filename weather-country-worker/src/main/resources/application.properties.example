@@ -1,0 +1,22 @@
+
+amqp-host=
+amqp-port=
+amqp-username=
+amqp-password=
+
+# Incoming request messages <- API
+mp.messaging.incoming.weather-requests-in.connector=smallrye-amqp
+mp.messaging.incoming.weather-requests-in.address=weather-requests
+mp.messaging.incoming.weather-requests-in.durable=true
+mp.messaging.incoming.weather-requests-in.content-type=application/json
+
+# Outgoing response messages -> API
+mp.messaging.outgoing.weather-responses-out.connector=smallrye-amqp
+mp.messaging.outgoing.weather-responses-out.address=weather-responses
+mp.messaging.outgoing.weather-responses-out.durable=true
+mp.messaging.outgoing.weather-responses-out.content-type=application/json
+
+# REST Client Configuration
+quarkus.rest-client.country-api.url=https://restcountries.com/v3.1
+quarkus.rest-client.weather-api.url=https://api.open-meteo.com/v1
+
