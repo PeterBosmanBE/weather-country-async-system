@@ -1,8 +1,17 @@
 import type { NextConfig } from "next";
 
+const weatherApiBaseUrl = process.env.WEATHER_API_BASE_URL!;
+
 const nextConfig: NextConfig = {
-  /* config options here */
   reactCompiler: true,
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${weatherApiBaseUrl}/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
