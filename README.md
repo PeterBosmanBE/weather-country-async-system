@@ -4,6 +4,8 @@ This project is a distributed web application based on a microservices architect
 
 ![Banner](.github/assets/ui.png)
 
+*Read this in other languages: [Dutch](README.nl.md).*
+
 ## Architecture & Components
 
 The project consists of the following main components:
@@ -39,7 +41,6 @@ Once all the containers are successfully running, you can access the application
 
 - Frontend / UI: http://localhost:3000
 - Backend API: http://localhost:8080
-- Backend Worker: http://localhost:8081
 
 ## API Reference
 
