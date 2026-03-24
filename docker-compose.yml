@@ -1,12 +1,11 @@
-version: "3.9"
-
 services:
   weather-country-api:
     container_name: weather-country-api
     ports:
-      - "9023:8080"   # adjust if the app uses a different port
+      - "8080:8080"   # adjust if the app uses a different port
     build:
-        context: ./weather-country-api/src/main/docker
+        context: ./weather-country-api
+        dockerfile: src/main/docker/Dockerfile.jvm
     environment:
       - quarkus.datasource.db-kind=postgresql
       - quarkus.datasource.jdbc.url=jdbc:postgresql://weather-postgres:5432/weatherdb
@@ -30,7 +29,8 @@ services:
     ports:
       - "8081:8081"   # adjust if the app uses a different port
     build:
-        context: ./weather-country-worker/src/main/docker
+        context: ./weather-country-worker
+        dockerfile: src/main/docker/Dockerfile.jvm
     environment:
       - amqp-host=artemis
       - amqp-port=5672
@@ -50,7 +50,7 @@ services:
   weather-country-ui:
     container_name: weather-country-ui
     ports:
-      - "8394:3000"   # adjust if the app uses a different port
+      - "3000:3000"   # adjust if the app uses a different port
     build:
         context: ./weather-country-ui
         args:
@@ -94,7 +94,7 @@ services:
     image: postgres:16-alpine
     container_name: weather-postgres
     ports:
-      - "4321:5432"   # adjust if the app uses a different port
+      - "5432:5432"   # adjust if the app uses a different port
     restart: unless-stopped
     environment:
       POSTGRES_DB: weatherdb
