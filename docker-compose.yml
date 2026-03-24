@@ -25,7 +25,7 @@ services:
   weather-country-worker:
     container_name: weather-country-worker
     ports:
-      - "8081:8081"   # adjust if the app uses a different port
+      - "8081:8080"   # adjust if the app uses a different port
     build: ./weather-country-worker
     environment:
       - amqp-host=artemis
