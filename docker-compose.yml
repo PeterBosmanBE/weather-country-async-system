@@ -1,0 +1,116 @@
+version: "3.9"
+
+services:
+  weather-country-api:
+    container_name: weather-country-api
+    ports:
+      - "9023:8080"   # adjust if the app uses a different port
+    build:
+        context: ./weather-country-api/src/main/docker
+    environment:
+      - quarkus.datasource.db-kind=postgresql
+      - quarkus.datasource.jdbc.url=jdbc:postgresql://weather-postgres:5432/weatherdb
+      - quarkus.datasource.username=weatheruser
+      - quarkus.datasource.password=weatherpass
+      - amqp-host=artemis
+      - amqp-port=5672
+      - amqp-username=artemis
+      - amqp-password=artemis
+    restart: unless-stopped
+    depends_on:
+      - artemis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/q/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  weather-country-worker:
+    container_name: weather-country-worker
+    ports:
+      - "8081:8081"   # adjust if the app uses a different port
+    build:
+        context: ./weather-country-worker/src/main/docker
+    environment:
+      - amqp-host=artemis
+      - amqp-port=5672
+      - amqp-username=artemis
+      - amqp-password=artemis
+      - quarkus.rest-client.country-api.url=https://restcountries.com/v3.1
+      - quarkus.rest-client.weather-api.url=https://api.open-meteo.com/v1
+    restart: unless-stopped
+    depends_on:
+      - artemis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/q/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  weather-country-ui:
+    container_name: weather-country-ui
+    ports:
+      - "8394:3000"   # adjust if the app uses a different port
+    build:
+        context: ./weather-country-ui
+        args:
+          - WEATHER_API_BASE_URL=http://weather-country-api:8080
+    environment:
+      - WEATHER_API_BASE_URL=http://weather-country-api:8080
+    restart: unless-stopped
+    depends_on:
+      weather-country-api:
+        condition: service_healthy
+  artemis:
+    image: apache/activemq-artemis:latest-alpine
+    container_name: weather-artemis
+    restart: unless-stopped
+    ports:
+      - "61616:61616"   # Core, AMQP, STOMP, HornetQ, OpenWire (multi-protocol)
+      - "5672:5672"     # AMQP
+      - "61613:61613"   # STOMP
+      - "1883:1883"     # MQTT
+      - "8161:8161"     # Web console / management UI
+    environment:
+      ARTEMIS_USER: artemis
+      ARTEMIS_PASSWORD: artemis
+      # Allow anonymous logins (set to false for production)
+      ANONYMOUS_LOGIN: "false"
+      # Extra args passed to `artemis create`
+      EXTRA_ARGS: "--http-host 0.0.0.0 --relax-jolokia"
+    volumes:
+      # Persist broker data and config outside the container
+      - weather-artemis-data:/var/lib/artemis-instance
+      # Optional: mount custom config directory (uncomment to use)
+      # - ./artemis-config:/var/lib/artemis-instance/etc
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:8161 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: weather-postgres
+    ports:
+      - "4321:5432"   # adjust if the app uses a different port
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: weatherdb
+      POSTGRES_USER: weatheruser
+      POSTGRES_PASSWORD: weatherpass
+    volumes:
+      - weather-postgres-data:/var/lib/weather-postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weatheruser -d weatherdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+ 
+volumes:
+  weather-artemis-data:
+    driver: local
+  weather-postgres-data:
+    driver: local
